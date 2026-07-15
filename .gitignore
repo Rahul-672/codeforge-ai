@@ -1,0 +1,28 @@
+# Maven
+target/
+*.class
+*.jar
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Environment files — NEVER push these
+*.env
+application-local.yml
+
+# Cloned repositories (large temp files)
+repos/
+
+# Logs
+*.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Docker volumes (handled by Docker)
+docker/postgres_data/
+docker/qdrant_data/
