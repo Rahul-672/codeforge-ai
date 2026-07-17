@@ -109,7 +109,7 @@ public class SearchService {
     }
 
     private SearchResult toSearchResult(ScoredPoint point) {
-        var payload = point.getPayload();
+        var payload = point.getPayloadMap();
         return SearchResult.builder()
                 .content(getStringValue(payload, "content"))
                 .filePath(getStringValue(payload, "file_path"))
