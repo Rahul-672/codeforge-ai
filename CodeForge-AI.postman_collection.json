@@ -1,0 +1,231 @@
+{
+  "info": {
+    "name": "CodeForge AI API",
+    "description": "Complete API collection for CodeForge AI — AI-powered code intelligence platform",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "auth_url", "value": "http://localhost:8081" },
+    { "key": "ingestion_url", "value": "http://localhost:8083" },
+    { "key": "token", "value": "" },
+    { "key": "repo_id", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Auth Service",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "url": "{{auth_url}}/api/auth/register",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Rahul\",\n  \"email\": \"rahul@gmail.com\",\n  \"password\": \"123456\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('token', json.data.token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{auth_url}}/api/auth/login",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"rahul@gmail.com\",\n  \"password\": \"123456\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Repository Ingestion",
+      "item": [
+        {
+          "name": "Ingest Repository",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('repo_id', json.data.repositoryId);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{ingestion_url}}/api/ingest/repository",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-User-Email", "value": "rahul@gmail.com" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"url\": \"https://github.com/spring-projects/spring-petclinic\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Check Ingestion Status",
+          "request": {
+            "method": "GET",
+            "url": "{{ingestion_url}}/api/ingest/repository/{{repo_id}}/status",
+            "header": []
+          }
+        },
+        {
+          "name": "List My Repositories",
+          "request": {
+            "method": "GET",
+            "url": "{{ingestion_url}}/api/ingest/repositories",
+            "header": [
+              { "key": "X-User-Email", "value": "rahul@gmail.com" }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "RAG Pipeline",
+      "item": [
+        {
+          "name": "Generate Embeddings",
+          "request": {
+            "method": "POST",
+            "url": "{{ingestion_url}}/api/rag/embed/{{repo_id}}",
+            "header": []
+          }
+        },
+        {
+          "name": "Semantic Search",
+          "request": {
+            "method": "POST",
+            "url": "{{ingestion_url}}/api/rag/search",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"how does vet search work\",\n  \"repositoryId\": \"{{repo_id}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Semantic Search - Owner",
+          "request": {
+            "method": "POST",
+            "url": "{{ingestion_url}}/api/rag/search",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"how is owner information stored\",\n  \"repositoryId\": \"{{repo_id}}\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "AI Agents",
+      "item": [
+        {
+          "name": "Bug Diagnosis Agent",
+          "request": {
+            "method": "POST",
+            "url": "{{ingestion_url}}/api/agent/diagnose",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"repositoryId\": \"{{repo_id}}\",\n  \"bugDescription\": \"NullPointerException in VetController when calling findAll() on vetRepository\",\n  \"affectedClass\": \"VetController\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Orchestrator - All Agents",
+          "request": {
+            "method": "POST",
+            "url": "{{ingestion_url}}/api/orchestrator/analyze",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"repositoryId\": \"{{repo_id}}\",\n  \"query\": \"review the vet controller code for bugs and security issues\",\n  \"agents\": [\"ALL\"]\n}"
+            }
+          }
+        },
+        {
+          "name": "Orchestrator - Bug + Security",
+          "request": {
+            "method": "POST",
+            "url": "{{ingestion_url}}/api/orchestrator/analyze",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"repositoryId\": \"{{repo_id}}\",\n  \"query\": \"check for security vulnerabilities in authentication\",\n  \"agents\": [\"BUG_DIAGNOSIS\", \"SECURITY\"]\n}"
+            }
+          }
+        },
+        {
+          "name": "Orchestrator - Auto Intent",
+          "request": {
+            "method": "POST",
+            "url": "{{ingestion_url}}/api/orchestrator/analyze",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"repositoryId\": \"{{repo_id}}\",\n  \"query\": \"java.lang.NullPointerException at VetController.java:45\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Health Checks",
+      "item": [
+        {
+          "name": "Auth Service Health",
+          "request": {
+            "method": "GET",
+            "url": "{{auth_url}}/actuator/health",
+            "header": []
+          }
+        },
+        {
+          "name": "Ingestion Service Health",
+          "request": {
+            "method": "GET",
+            "url": "{{ingestion_url}}/actuator/health",
+            "header": []
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -4,12 +4,20 @@ import { Search as SearchIcon, FileCode, Star } from 'lucide-react';
 import { useEffect } from 'react';
 
 export default function Search() {
-  const [query, setQuery] = useState('');
-  const [repoId, setRepoId] = useState('');
   const [repos, setRepos] = useState<any[]>([]);
-  const [results, setResults] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const email = localStorage.getItem('email') || '';
+
+  const [results, setResults] = useState<any>(() => {
+    const saved = sessionStorage.getItem('searchResults');
+    return saved ? JSON.parse(saved) : null;
+  });
+
+  const [query, setQuery] = useState(() =>
+      sessionStorage.getItem('searchQuery') || '');
+
+  const [repoId, setRepoId] = useState(() =>
+      sessionStorage.getItem('searchRepoId') || '');
 
   useEffect(() => {
     getUserRepos(email).then(res => {

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { orchestrateAnalysis, getUserRepos } from '../api';
+import {orchestrateAnalysis, getUserRepos, ragSearch} from '../api';
 import { Cpu, Bug, Shield, Code, ChevronDown,
          ChevronUp, AlertTriangle } from 'lucide-react';
 
@@ -8,7 +8,10 @@ export default function Analyze() {
   const [repoId, setRepoId] = useState('');
   const [repos, setRepos] = useState<any[]>([]);
   const [selectedAgents, setSelectedAgents] = useState<string[]>(['ALL']);
-  const [results, setResults] = useState<any>(null);
+  const [results, setResults] = useState<any>(() => {
+    const saved = sessionStorage.getItem('analyzeResults');
+    return saved ? JSON.parse(saved) : null;
+  });
   const [loading, setLoading] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
   const email = localStorage.getItem('email') || '';
@@ -26,12 +29,13 @@ export default function Analyze() {
     e.preventDefault();
     if (!query.trim() || !repoId) return;
     setLoading(true);
-    setResults(null);
     try {
-      const agents = selectedAgents.includes('ALL')
-        ? ['ALL'] : selectedAgents;
-      const res = await orchestrateAnalysis(repoId, query, agents);
+      const res = await ragSearch(query, repoId);
       setResults(res.data.data);
+      sessionStorage.setItem('analyzeResults',
+          JSON.stringify(res.data.data));
+      sessionStorage.setItem('searchQuery', query);
+      sessionStorage.setItem('searchRepoId', repoId);
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
   };
