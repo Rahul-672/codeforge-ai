@@ -1,0 +1,23 @@
+server:
+  port: 8085
+
+spring:
+  application:
+    name: api-gateway
+
+jwt:
+  secret: codeforge-ai-super-secret-jwt-key-256-bits-long-change-in-prod
+
+services:
+  auth-url: http://localhost:8081
+  project-url: http://localhost:8082
+  ingestion-url: http://localhost:8083
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
