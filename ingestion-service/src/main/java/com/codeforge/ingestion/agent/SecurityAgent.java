@@ -13,7 +13,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SecurityAgent {
     private final SearchService searchService;
-    private final OllamaService ollamaService;
+    private final LLMService LLMService;
 
     private static final String SYSTEM_PROMPT = """
             You are an expert application security analyst
@@ -63,7 +63,7 @@ public class SecurityAgent {
                     + codeContext
                     + "\nFocus on: " + query;
 
-            String llmResponse = ollamaService.chat(SYSTEM_PROMPT, userMessage);
+            String llmResponse = LLMService.chat(SYSTEM_PROMPT, userMessage);
 
             if(llmResponse == null){
                 return AgentResult.builder()

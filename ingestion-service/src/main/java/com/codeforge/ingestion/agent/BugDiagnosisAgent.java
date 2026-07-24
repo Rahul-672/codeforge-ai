@@ -7,8 +7,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -16,7 +14,7 @@ import java.util.stream.Collectors;
 public class BugDiagnosisAgent {
 
     private final SearchService searchService;
-    private final OllamaService ollamaService;
+    private final LLMService LLMService;
     private final InputGuardrail inputGuardrail;
 
     private static final String SYSTEM_PROMPT = """
@@ -85,7 +83,7 @@ public class BugDiagnosisAgent {
                 relevantChunks.size());
 
         // Step 5 — call LLM
-        String llmResponse = ollamaService.chat(
+        String llmResponse = LLMService.chat(
                 SYSTEM_PROMPT, userMessage);
 
         if (llmResponse == null) {

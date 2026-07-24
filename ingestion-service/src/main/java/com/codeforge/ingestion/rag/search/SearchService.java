@@ -1,14 +1,14 @@
 package com.codeforge.ingestion.rag.search;
 
+import com.codeforge.ingestion.rag.embedding.EmbeddingService;
 import com.codeforge.ingestion.rag.embedding.QdrantService;
-import io.qdrant.client.grpc.Points.ScoredPoint;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import com.codeforge.ingestion.rag.embedding.EmbeddingService;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -24,53 +24,46 @@ public class SearchService {
     private static final int INITIAL_RETRIEVAL_SIZE = 10;
     private static final int FINAL_CHUNK_COUNT = 3;
 
-    public RAGResponse search(String query,
-                              String repositoryId) {
-
+    public RAGResponse search(String query, String repositoryId) {
         log.info("RAG search: '{}' in repo: {}", query, repositoryId);
 
-        // Step 1 — embed the query
-        List<Float> queryEmbedding = embeddingService
-                .getEmbedding(query);
+        // Step 1 — embed query
+        List<Float> queryEmbedding =
+                embeddingService.getEmbedding(query);
         if (queryEmbedding == null) {
             return RAGResponse.builder()
                     .answer("Failed to process query")
                     .build();
         }
 
-        // Step 2 — retrieve top 10 candidates from Qdrant
-        List<ScoredPoint> rawResults = qdrantService.search(
-                queryEmbedding, repositoryId,
-                INITIAL_RETRIEVAL_SIZE);
+        // Step 2 — retrieve from Qdrant
+        List<Map<String, Object>> rawResults = qdrantService.search(
+                queryEmbedding, repositoryId, INITIAL_RETRIEVAL_SIZE);
 
         List<SearchResult> candidates = new ArrayList<>();
-        for (ScoredPoint point : rawResults) {
+        for (Map<String, Object> point : rawResults) {
             candidates.add(toSearchResult(point));
         }
 
         log.info("Retrieved {} candidates from Qdrant",
                 candidates.size());
 
-        // Step 3 — rerank candidates, keep top 3
+        // Step 3 — rerank
         List<SearchResult> reranked = rerankerService.rerank(
                 query, candidates, FINAL_CHUNK_COUNT);
 
         log.info("Reranked to {} final chunks", reranked.size());
 
-        // Step 4 — build prompt with citations
+        // Step 4 — build citations
         String promptWithCitations = citationBuilder
                 .buildPromptWithCitations(query, reranked);
-
-        // Step 5 — build citation list
         List<Citation> citations = citationBuilder
                 .buildCitations(reranked);
 
-        // Step 6 — generate answer
-        // For now return the prompt context as answer
-        // Will be replaced with LLM call in agent phase
+        // Step 5 — build answer
         String answer = buildContextAnswer(reranked, query);
 
-        // Step 7 — evaluate RAG quality
+        // Step 6 — evaluate
         EvaluationResult evaluation = ragEvaluator.evaluate(
                 query, reranked, answer);
 
@@ -84,7 +77,6 @@ public class SearchService {
                 .build();
     }
 
-    // Temporary answer builder until LLM is integrated
     private String buildContextAnswer(List<SearchResult> chunks,
                                       String query) {
         StringBuilder sb = new StringBuilder();
@@ -104,37 +96,32 @@ public class SearchService {
                     .append(String.format("%.2f", chunk.getScore()))
                     .append(")\n");
         }
-
         return sb.toString();
     }
 
-    private SearchResult toSearchResult(ScoredPoint point) {
-        var payload = point.getPayloadMap();
+    private SearchResult toSearchResult(Map<String, Object> point) {
+        Map<String, Object> payload =
+                (Map<String, Object>) point.get("payload");
+        float score = ((Number) point.get("score")).floatValue();
+
         return SearchResult.builder()
-                .content(getStringValue(payload, "content"))
-                .filePath(getStringValue(payload, "file_path"))
-                .fileName(getStringValue(payload, "file_name"))
-                .language(getStringValue(payload, "language"))
-                .methodName(getStringValue(payload, "method_name"))
-                .score(point.getScore())
-                .chunkIndex((int) getIntValue(
-                        payload, "chunk_index"))
+                .content(getString(payload, "content"))
+                .filePath(getString(payload, "file_path"))
+                .fileName(getString(payload, "file_name"))
+                .language(getString(payload, "language"))
+                .methodName(getString(payload, "method_name"))
+                .score(score)
+                .chunkIndex(getInt(payload, "chunk_index"))
                 .build();
     }
 
-    private String getStringValue(
-            java.util.Map<String,
-                    io.qdrant.client.grpc.JsonWithInt.Value> payload,
-            String key) {
-        var value = payload.get(key);
-        return value != null ? value.getStringValue() : "";
+    private String getString(Map<String, Object> map, String key) {
+        Object val = map.get(key);
+        return val != null ? val.toString() : "";
     }
 
-    private long getIntValue(
-            java.util.Map<String,
-                    io.qdrant.client.grpc.JsonWithInt.Value> payload,
-            String key) {
-        var value = payload.get(key);
-        return value != null ? value.getIntegerValue() : 0;
+    private int getInt(Map<String, Object> map, String key) {
+        Object val = map.get(key);
+        return val != null ? ((Number) val).intValue() : 0;
     }
 }
