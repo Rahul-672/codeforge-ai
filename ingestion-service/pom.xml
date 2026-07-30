@@ -62,11 +62,11 @@
 			<version>6.7.0.202309050840-r</version>
 		</dependency>
 
-		<!-- MinIO -->
+		<!-- AWS SDK v2 S3 (replaces MinIO SDK - supports Supabase S3 path-based endpoints) -->
 		<dependency>
-			<groupId>io.minio</groupId>
-			<artifactId>minio</artifactId>
-			<version>8.5.7</version>
+			<groupId>software.amazon.awssdk</groupId>
+			<artifactId>s3</artifactId>
+			<version>2.25.60</version>
 		</dependency>
 
 

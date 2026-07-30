@@ -77,10 +77,20 @@ public class GatewayRouter {
 
         String targetPath = targetUrl + request.path();
 
+        HttpHeaders headersToForward = new HttpHeaders();
+        request.headers().asHttpHeaders().forEach((key, values) -> {
+            if (!key.equalsIgnoreCase(HttpHeaders.HOST) &&
+                !key.equalsIgnoreCase(HttpHeaders.CONTENT_LENGTH) &&
+                !key.equalsIgnoreCase(HttpHeaders.TRANSFER_ENCODING) &&
+                !key.equalsIgnoreCase(HttpHeaders.CONNECTION)) {
+                headersToForward.addAll(key, values);
+            }
+        });
+
         return webClientBuilder.build()
                 .method(request.method())
                 .uri(targetPath)
-                .headers(headers -> headers.addAll(request.headers().asHttpHeaders()))
+                .headers(headers -> headers.addAll(headersToForward))
                 .body(request.bodyToMono(String.class), String.class)
                 .retrieve()
                 .toEntity(String.class)
