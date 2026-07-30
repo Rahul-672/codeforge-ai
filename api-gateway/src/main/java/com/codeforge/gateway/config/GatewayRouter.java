@@ -55,6 +55,10 @@ public class GatewayRouter {
             String targetUrl,
             boolean requireAuth) {
 
+        if (request.method() == org.springframework.http.HttpMethod.OPTIONS) {
+            return ServerResponse.ok().build();
+        }
+
         if (requireAuth) {
             String authHeader = request.headers()
                     .firstHeader(HttpHeaders.AUTHORIZATION);
@@ -87,12 +91,18 @@ public class GatewayRouter {
             }
         });
 
-        return webClientBuilder.build()
+        WebClient.RequestBodySpec spec = webClientBuilder.build()
                 .method(request.method())
                 .uri(targetPath)
-                .headers(headers -> headers.addAll(headersToForward))
-                .body(request.bodyToMono(String.class), String.class)
-                .retrieve()
+                .headers(headers -> headers.addAll(headersToForward));
+
+        if (request.method() == org.springframework.http.HttpMethod.POST ||
+            request.method() == org.springframework.http.HttpMethod.PUT ||
+            request.method() == org.springframework.http.HttpMethod.PATCH) {
+            spec.body(request.bodyToMono(String.class), String.class);
+        }
+
+        return spec.retrieve()
                 .toEntity(String.class)
                 .flatMap(response -> {
                     HttpHeaders responseHeaders = new HttpHeaders();
@@ -105,6 +115,11 @@ public class GatewayRouter {
                             .status(response.getStatusCode())
                             .headers(h -> h.addAll(responseHeaders))
                             .bodyValue(response.getBody() != null ? response.getBody() : "");
+                })
+                .onErrorResume(ex -> {
+                    log.error("Gateway error proxying to {}: {}", targetPath, ex.getMessage());
+                    return ServerResponse.status(HttpStatus.BAD_GATEWAY)
+                            .bodyValue("{\"success\":false,\"message\":\"Service is waking up or temporarily unavailable. Please retry in a few seconds.\"}");
                 });
     }
 }
