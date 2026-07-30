@@ -1,0 +1,150 @@
+version: '3.8'
+
+services:
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: codeforge-postgres-prod
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-codeforge}
+      POSTGRES_USER: ${POSTGRES_USER:-codeforge}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-codeforge123}
+    volumes:
+      - postgres_prod_data:/var/lib/postgresql/data
+    networks:
+      - codeforge-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-codeforge} -d ${POSTGRES_DB:-codeforge}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    container_name: codeforge-minio-prod
+    restart: always
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_prod_data:/data
+    networks:
+      - codeforge-net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9000/minio/health/live || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: codeforge-redis-prod
+    restart: always
+    networks:
+      - codeforge-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  auth-service:
+    build:
+      context: ..
+      dockerfile: auth-service/Dockerfile
+    container_name: codeforge-auth-service
+    restart: always
+    environment:
+      PORT: 8081
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-codeforge}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-codeforge}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-codeforge123}
+      JWT_SECRET: ${JWT_SECRET:-codeforge-ai-super-secret-jwt-key-256-bits-long-change-in-prod}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - codeforge-net
+
+  project-manager:
+    build:
+      context: ..
+      dockerfile: project-manager/Dockerfile
+    container_name: codeforge-project-manager
+    restart: always
+    environment:
+      PORT: 8082
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-codeforge}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-codeforge}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-codeforge123}
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - codeforge-net
+
+  ingestion-service:
+    build:
+      context: ..
+      dockerfile: ingestion-service/Dockerfile
+    container_name: codeforge-ingestion-service
+    restart: always
+    environment:
+      PORT: 8083
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-codeforge}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-codeforge}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-codeforge123}
+      MINIO_URL: http://minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+      MINIO_BUCKET: ${MINIO_BUCKET:-codeforge-repos}
+      GITHUB_TOKEN: ${GITHUB_TOKEN}
+      NVIDIA_API_KEY: ${NVIDIA_API_KEY}
+      GROQ_API_KEY: ${GROQ_API_KEY}
+      QDRANT_URL: ${QDRANT_URL:-https://c220b29b-e47c-4555-a3f7-e729134e8be9.eu-west-2-0.aws.cloud.qdrant.io}
+      QDRANT_API_KEY: ${QDRANT_API_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    networks:
+      - codeforge-net
+
+  api-gateway:
+    build:
+      context: ..
+      dockerfile: api-gateway/Dockerfile
+    container_name: codeforge-api-gateway
+    restart: always
+    ports:
+      - "${GATEWAY_PORT:-8085}:8085"
+    environment:
+      PORT: 8085
+      JWT_SECRET: ${JWT_SECRET:-codeforge-ai-super-secret-jwt-key-256-bits-long-change-in-prod}
+      AUTH_SERVICE_URL: http://auth-service:8081
+      PROJECT_SERVICE_URL: http://project-manager:8082
+      INGESTION_SERVICE_URL: http://ingestion-service:8083
+    depends_on:
+      - auth-service
+      - project-manager
+      - ingestion-service
+    networks:
+      - codeforge-net
+
+networks:
+  codeforge-net:
+    driver: bridge
+
+volumes:
+  postgres_prod_data:
+  minio_prod_data:

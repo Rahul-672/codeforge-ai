@@ -23,10 +23,16 @@ logs/
 .DS_Store
 Thumbs.db
 
+# Benchmark outputs & JMeter local files
+benchmark_results.json
+jmeter_report/
+results.jtl
+jmeter_summary.csv
+jmeter_aggregate.csv
+
 # Docker volumes (handled by Docker)
 docker/postgres_data/
 docker/qdrant_data/
-
 
 # Frontend
 frontend/node_modules/

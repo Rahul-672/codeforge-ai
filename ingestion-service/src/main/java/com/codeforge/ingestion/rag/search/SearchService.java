@@ -4,6 +4,7 @@ import com.codeforge.ingestion.rag.embedding.EmbeddingService;
 import com.codeforge.ingestion.rag.embedding.QdrantService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -24,12 +25,40 @@ public class SearchService {
     private static final int INITIAL_RETRIEVAL_SIZE = 10;
     private static final int FINAL_CHUNK_COUNT = 3;
 
+    /**
+     * Cached RAG search — returns from Redis on cache hit.
+     * Uses Spring @Cacheable with composite key: repositoryId + query.
+     */
+    @Cacheable(value = "rag_search", key = "#repositoryId + ':' + #query")
     public RAGResponse search(String query, String repositoryId) {
+        return executeSearch(query, repositoryId);
+    }
+
+    // ── TEST — BENCHMARK ONLY ──────────────────────────────────────
+    // This method bypasses Redis cache entirely so benchmark scripts
+    // can measure raw pipeline latency (BEFORE optimization baseline).
+    // Not called in production — only via ?bypassCache=true parameter.
+    // ────────────────────────────────────────────────────────────────
+    public RAGResponse searchNoCache(String query, String repositoryId) {
+        return executeSearch(query, repositoryId);
+    }
+    // ── END TEST ───────────────────────────────────────────────────
+
+    /**
+     * Core RAG search pipeline — shared by both cached and uncached paths.
+     * Measures and logs timing for each pipeline stage.
+     */
+    private RAGResponse executeSearch(String query, String repositoryId) {
         log.info("RAG search: '{}' in repo: {}", query, repositoryId);
 
+        long pipelineStart = System.currentTimeMillis();
+
         // Step 1 — embed query
+        long stepStart = System.currentTimeMillis();
         List<Float> queryEmbedding =
-                embeddingService.getEmbedding(query);
+                embeddingService.getQueryEmbedding(query);
+        long embeddingTime = System.currentTimeMillis() - stepStart;
+
         if (queryEmbedding == null) {
             return RAGResponse.builder()
                     .answer("Failed to process query")
@@ -37,8 +66,10 @@ public class SearchService {
         }
 
         // Step 2 — retrieve from Qdrant
+        stepStart = System.currentTimeMillis();
         List<Map<String, Object>> rawResults = qdrantService.search(
                 queryEmbedding, repositoryId, INITIAL_RETRIEVAL_SIZE);
+        long qdrantTime = System.currentTimeMillis() - stepStart;
 
         List<SearchResult> candidates = new ArrayList<>();
         for (Map<String, Object> point : rawResults) {
@@ -49,8 +80,10 @@ public class SearchService {
                 candidates.size());
 
         // Step 3 — rerank
+        stepStart = System.currentTimeMillis();
         List<SearchResult> reranked = rerankerService.rerank(
                 query, candidates, FINAL_CHUNK_COUNT);
+        long rerankTime = System.currentTimeMillis() - stepStart;
 
         log.info("Reranked to {} final chunks", reranked.size());
 
@@ -64,8 +97,16 @@ public class SearchService {
         String answer = buildContextAnswer(reranked, query);
 
         // Step 6 — evaluate
+        stepStart = System.currentTimeMillis();
         EvaluationResult evaluation = ragEvaluator.evaluate(
                 query, reranked, answer);
+        long evalTime = System.currentTimeMillis() - stepStart;
+
+        long totalTime = System.currentTimeMillis() - pipelineStart;
+
+        // Log per-stage timing breakdown for benchmarking
+        log.info("Pipeline timing — Total: {}ms | Embedding: {}ms | Qdrant: {}ms | Rerank: {}ms | Eval: {}ms",
+                totalTime, embeddingTime, qdrantTime, rerankTime, evalTime);
 
         return RAGResponse.builder()
                 .answer(answer)
@@ -74,6 +115,12 @@ public class SearchService {
                 .retrievedChunks(reranked)
                 .reranked(true)
                 .totalCandidates(candidates.size())
+                .pipelineTimeMs(totalTime)           // timing field
+                .embeddingTimeMs(embeddingTime)       // timing field
+                .qdrantTimeMs(qdrantTime)             // timing field
+                .rerankTimeMs(rerankTime)             // timing field
+                .evalTimeMs(evalTime)                 // timing field
+                .cachedResult(false)                  // this was a fresh computation
                 .build();
     }
 

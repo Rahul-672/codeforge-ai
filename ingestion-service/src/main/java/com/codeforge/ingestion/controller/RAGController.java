@@ -30,7 +30,14 @@ public class RAGController {
 
     @PostMapping("/search")
     public ApiResponse<?> search(
-            @RequestBody Map<String, String> request) {
+            @RequestBody Map<String, String> request,
+            // ── TEST — BENCHMARK ONLY ──────────────────────────────
+            // Pass ?bypassCache=true to skip Redis and measure raw
+            // pipeline latency (BEFORE optimization baseline).
+            // Default: false (uses Redis cache = AFTER optimization).
+            // ────────────────────────────────────────────────────────
+            @RequestParam(value = "bypassCache",
+                    defaultValue = "false") boolean bypassCache) {
 
         String query = request.get("query");
         String repositoryId = request.get("repositoryId");
@@ -41,8 +48,16 @@ public class RAGController {
             return ApiResponse.error(guardrailResult.getReason());
         }
 
-        RAGResponse response = searchService.search(
-                query, repositoryId);
+        // ── TEST — BENCHMARK ONLY ──────────────────────────────
+        // bypassCache=true → calls searchNoCache() (skips Redis)
+        // bypassCache=false → calls search() (uses @Cacheable Redis)
+        // ────────────────────────────────────────────────────────
+        RAGResponse response;
+        if (bypassCache) {
+            response = searchService.searchNoCache(query, repositoryId);
+        } else {
+            response = searchService.search(query, repositoryId);
+        }
 
         return ApiResponse.success("Search completed", response);
     }

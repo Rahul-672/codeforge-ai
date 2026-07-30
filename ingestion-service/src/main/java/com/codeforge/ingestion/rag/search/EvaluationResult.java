@@ -4,12 +4,13 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import java.io.Serializable;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class EvaluationResult {
+public class EvaluationResult implements Serializable {
 
     // Score 0-1: Are retrieved chunks relevant to query?
     private float contextRelevance;

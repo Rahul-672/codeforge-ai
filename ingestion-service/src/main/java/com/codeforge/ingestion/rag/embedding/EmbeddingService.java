@@ -1,9 +1,11 @@
 package com.codeforge.ingestion.rag.embedding;
 
 import com.codeforge.ingestion.entity.CodeFile;
+import com.codeforge.ingestion.entity.CodeRepository;
 import com.codeforge.ingestion.rag.chunk.CodeChunk;
 import com.codeforge.ingestion.rag.chunk.ChunkingService;
 import com.codeforge.ingestion.repository.CodeFileRepository;
+import com.codeforge.ingestion.repository.CodeRepositoryRepository;
 import io.minio.GetObjectArgs;
 import io.minio.MinioClient;
 import lombok.RequiredArgsConstructor;
@@ -11,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Recover;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -31,6 +34,7 @@ public class EmbeddingService {
     private final ChunkingService chunkingService;
     private final QdrantService qdrantService;
     private final CodeFileRepository codeFileRepository;
+    private final CodeRepositoryRepository codeRepositoryRepository;
     private final RestTemplate restTemplate;
 
     @Value("${minio.url}")
@@ -45,22 +49,63 @@ public class EmbeddingService {
     @Value("${minio.bucket}")
     private String minioBucket;
 
-    @Value("${gemini.api-key:}")
-    private String geminiApiKey;
+//    // Ollama embedding config
+//    private static final String OLLAMA_API_URL =
+//            "http://localhost:11434/api/embeddings";
+//    private static final String OLLAMA_MODEL = "nomic-embed-text";
+//
+//    private static final String GEMINI_API_URL =
+//            "https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent";
+//
+//    @Value("${gemini.api-key:}")
+//    private String geminiApiKey;
 
-    private static final String GEMINI_BATCH_API_URL =
-            "https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:batchEmbedContents";
+    private static final String NVIDIA_API_URL =
+            "https://integrate.api.nvidia.com/v1/embeddings";
+    private static final String NVIDIA_MODEL =
+            "nvidia/nv-embedcode-7b-v1";
 
-    // Process up to 50 chunks in a single HTTP request
-    private static final int BATCH_SIZE = 50;
+    @Value("${nvidia.api-key:}")
+    private String nvidiaApiKey;
+
 
     @Async
     public void embedRepository(String repositoryId) {
-        log.info("Starting embedding pipeline for repository: {}", repositoryId);
+        log.info("Starting embedding pipeline for repository: {}",
+                repositoryId);
 
-        List<CodeFile> files = codeFileRepository.findByRepositoryId(repositoryId);
+        // ── Pre-flight: verify ingestion completed successfully ──────────
+        CodeRepository repo = codeRepositoryRepository.findById(repositoryId)
+                .orElse(null);
+        if (repo == null) {
+            log.error("Embedding aborted — repository not found in DB: {}. "
+                    + "Make sure you ran POST /api/ingestion/ingest first.",
+                    repositoryId);
+            return;
+        }
+        if (repo.getStatus() != CodeRepository.IngestionStatus.COMPLETED) {
+            log.error("Embedding aborted — repository {} has status '{}', expected COMPLETED. "
+                    + "Wait for ingestion to finish (or check for ingestion errors) before embedding.",
+                    repositoryId, repo.getStatus());
+            return;
+        }
+
+        List<CodeFile> files = codeFileRepository
+                .findByRepositoryId(repositoryId);
+
+        if (files.isEmpty()) {
+            log.error("Embedding aborted — no files found in DB for repository: {}. "
+                    + "Ingestion status is COMPLETED but code_files table has 0 rows. "
+                    + "Check MinIO bucket 'codeforge-repos' and re-run ingestion.",
+                    repositoryId);
+            return;
+        }
+        log.info("Found {} files to embed for repository: {}", files.size(), repositoryId);
+
         int embedded = 0;
         int skipped = 0;
+        int totalChunks = 0;
+        int failedChunks = 0;
 
         for (CodeFile file : files) {
             try {
@@ -69,130 +114,123 @@ public class EmbeddingService {
                     continue;
                 }
 
-                String content = readFileFromMinio(file.getMinioPath());
+                String content = readFileFromMinio(
+                        file.getMinioPath());
                 if (content == null || content.isBlank()) {
+                    log.warn("Skipping file {} — empty or unreadable from MinIO",
+                            file.getFileName());
                     skipped++;
                     continue;
                 }
 
                 List<CodeChunk> chunks = chunkingService.chunkFile(
-                        content, repositoryId, file.getId(),
-                        file.getFilePath(), file.getFileName(), file.getLanguage());
+                        content,
+                        repositoryId,
+                        file.getId(),
+                        file.getFilePath(),
+                        file.getFileName(),
+                        file.getLanguage());
 
-                // Process chunks in batches rather than individually
-                for (int i = 0; i < chunks.size(); i += BATCH_SIZE) {
-                    List<CodeChunk> batchChunks = chunks.subList(i, Math.min(i + BATCH_SIZE, chunks.size()));
-                    processBatch(batchChunks);
+                int storedInFile = 0;
+                for (CodeChunk chunk : chunks) {
+                    totalChunks++;
+                    // This now calls the retryable method
+                    List<Float> embedding =
+                            getEmbedding(chunk.getContent());
 
-                    // Respect free-tier rate limits (sleep between batches, not chunks)
+                    if (embedding != null) {
+                        qdrantService.storeChunk(chunk, embedding);
+                        storedInFile++;
+                    } else {
+                        failedChunks++;
+                        log.warn("NVIDIA returned null embedding for chunk {} of file {}",
+                                totalChunks, file.getFileName());
+                    }
                     try {
-                        Thread.sleep(4000);
+                        Thread.sleep(1500);
                     } catch (InterruptedException e) {
                         Thread.currentThread().interrupt();
                     }
                 }
 
                 embedded++;
-                log.debug("Embedded file: {} ({} chunks)", file.getFileName(), chunks.size());
+                log.info("[{}/{}] Embedded file: {} ({} chunks, {} stored)",
+                        embedded + skipped, files.size(),
+                        file.getFileName(), chunks.size(), storedInFile);
 
             } catch (Exception e) {
-                log.warn("Failed to embed file {}: {}", file.getFileName(), e.getMessage());
+                log.warn("Failed to embed file {}: {}",
+                        file.getFileName(), e.getMessage());
             }
         }
 
-        log.info("Embedding complete for repository: {}. Embedded: {}, Skipped: {}",
-                repositoryId, embedded, skipped);
+        log.info("Embedding complete for repository: {}. " +
+                        "Files — Embedded: {}, Skipped: {}. " +
+                        "Chunks — Total: {}, Failed: {}",
+                repositoryId, embedded, skipped,
+                totalChunks, failedChunks);
     }
 
-    // Automatically retry 3 times if the connection is reset
+    // Retries up to 4 times for RestClient exceptions (Timeouts, 429s, 500s).
+    // Uses randomized delay (Jitter) to prevent thundering herd: ~2s, ~4s, ~8s
     @Retryable(
             value = {RestClientException.class},
-            maxAttempts = 3,
-            backoff = @Backoff(delay = 2000, multiplier = 2)
+            maxAttempts = 4,
+            backoff = @Backoff(delay = 2000, multiplier = 2.0, random = true)
     )
-    public void processBatch(List<CodeChunk> batchChunks) {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
-        List<Map<String, Object>> requests = new ArrayList<>();
-
-        // Construct the correct batch request array for Gemini
-        for (CodeChunk chunk : batchChunks) {
-            Map<String, Object> content = new HashMap<>();
-            content.put("parts", List.of(Map.of("text", chunk.getContent())));
-
-            Map<String, Object> request = new HashMap<>();
-            request.put("model", "models/gemini-embedding-001");
-            request.put("content", content);
-            request.put("taskType", "RETRIEVAL_DOCUMENT");
-
-            requests.add(request);
-        }
-
-        Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("requests", requests);
-
-        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
-        String url = GEMINI_BATCH_API_URL + "?key=" + geminiApiKey;
-
-        ResponseEntity<Map> response = restTemplate.postForEntity(url, entity, Map.class);
-
-        if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
-            List<Map<String, Object>> embeddingsList =
-                    (List<Map<String, Object>>) response.getBody().get("embeddings");
-
-            if (embeddingsList != null && embeddingsList.size() == batchChunks.size()) {
-
-                // 1. Gather all vectors for this batch
-                List<List<Float>> batchVectors = new ArrayList<>();
-                for (int i = 0; i < batchChunks.size(); i++) {
-                    List<Double> values = (List<Double>) embeddingsList.get(i).get("values");
-                    List<Float> floatValues = values.stream()
-                            .map(Double::floatValue)
-                            .collect(Collectors.toList());
-                    batchVectors.add(floatValues);
-                }
-
-                // 2. Send the entire array of chunks and vectors to Qdrant at once
-                qdrantService.storeBatch(batchChunks, batchVectors);
-            }
-        } else {
-            throw new RestClientException("Failed to get embeddings from Gemini. Status code: " + response.getStatusCode());
-        }
+    public List<Float> getEmbedding(String text) {
+        return callNvidiaEmbedding(text, "passage");
     }
 
-    public List<Float> getEmbedding(String text) {
+    public List<Float> getQueryEmbedding(String text) {
+        return callNvidiaEmbedding(text, "query");
+    }
+
+    private List<Float> callNvidiaEmbedding(String text,
+                                            String inputType) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-
-        Map<String, Object> content = new HashMap<>();
-        content.put("parts", List.of(Map.of("text", text)));
+        headers.setBearerAuth(nvidiaApiKey);
 
         Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("model", "models/gemini-embedding-001");
-        requestBody.put("content", content);
+        requestBody.put("input", text);
+        requestBody.put("model", NVIDIA_MODEL);
+        requestBody.put("input_type", inputType);
+        requestBody.put("encoding_format", "float");
+        requestBody.put("truncate", "END");
 
-        // Optimize the embedding for user search queries rather than document storage
-        requestBody.put("taskType", "RETRIEVAL_QUERY");
+        HttpEntity<Map<String, Object>> request =
+                new HttpEntity<>(requestBody, headers);
 
-        HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
-        String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent?key=" + geminiApiKey;
+        // Let RestClientException propagate so @Retryable can retry
+        // on 502, 429, 500, timeouts, etc.
+        ResponseEntity<Map> response = restTemplate.postForEntity(
+                NVIDIA_API_URL, request, Map.class);
 
-        try {
-            ResponseEntity<Map> response = restTemplate.postForEntity(url, request, Map.class);
-
-            if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
-                Map<String, Object> embedding = (Map<String, Object>) response.getBody().get("embedding");
-                if (embedding != null) {
-                    List<Double> values = (List<Double>) embedding.get("values");
-                    return values.stream()
-                            .map(Double::floatValue)
-                            .collect(Collectors.toList());
-                }
+        if (response.getStatusCode() == HttpStatus.OK
+                && response.getBody() != null) {
+            List<Map<String, Object>> data =
+                    (List<Map<String, Object>>)
+                            response.getBody().get("data");
+            if (data != null && !data.isEmpty()) {
+                List<Double> embedding =
+                        (List<Double>) data.get(0).get("embedding");
+                return embedding.stream()
+                        .map(Double::floatValue)
+                        .collect(Collectors.toList());
             }
-        } catch (Exception e) {
-            log.error("Error getting single embedding for search query: {}", e.getMessage());
         }
+        log.warn("NVIDIA returned OK but no embedding data for input_type={}",
+                inputType);
+        return null;
+    }
+
+    // Fallback if all 4 retries fail. Keeps the pipeline from crashing.
+    @Recover
+    public List<Float> recoverFromEmbeddingFailure(
+            RestClientException e, String text) {
+        log.error("Exhausted all retries for NVIDIA embedding. " +
+                "Skipping chunk. Error: {}", e.getMessage());
         return null;
     }
 

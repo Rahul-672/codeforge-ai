@@ -2,12 +2,16 @@ package com.codeforge.ingestion;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cache.annotation.EnableCaching;
+import org.springframework.retry.annotation.EnableRetry;
 import org.springframework.scheduling.annotation.EnableAsync;
 
 import java.util.TimeZone;
 
 @SpringBootApplication
 @EnableAsync
+@EnableRetry
+@EnableCaching
 public class IngestionServiceApplication {
     public static void main(String[] args) {
         // Pin the JVM timezone before the datasource initializes. Some JVMs default

@@ -1,9 +1,9 @@
 server:
-  port: ${PORT:8081}
+  port: ${PORT:8082}
 
 spring:
   application:
-    name: auth-service
+    name: project-manager
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5433/codeforge}
     username: ${SPRING_DATASOURCE_USERNAME:codeforge}
@@ -13,10 +13,10 @@ spring:
     hibernate:
       ddl-auto: update
     show-sql: false
-
-jwt:
-  secret: ${JWT_SECRET:codeforge-ai-super-secret-jwt-key-256-bits-long-change-in-prod}
-  expiration: ${JWT_EXPIRATION:86400000}
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:6380}
 
 management:
   endpoints:

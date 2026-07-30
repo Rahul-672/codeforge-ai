@@ -1,0 +1,5 @@
+Label,# Samples,Average,Min,Max,Std. Dev.,Error %,Throughput,Received KB/sec,Sent KB/sec,Avg. Bytes
+RAG Search — BEFORE (No Cache),50,692,390,2490,435.28,0.000%,4.57080,12.71,1.47,2846.4
+Prime Cache — Warm-up Request,10,1269,13,2652,763.81,0.000%,1.82782,5.04,0.55,2824.4
+RAG Search — AFTER (Redis Cached),50,98,6,2250,378.31,0.000%,9.45001,26.27,3.05,2847.1
+TOTAL,110,474,6,2652,589.74,0.000%,5.64160,15.67,1.81,2844.7

@@ -1,17 +1,17 @@
 server:
-  port: 8085
+  port: ${PORT:8085}
 
 spring:
   application:
     name: api-gateway
 
 jwt:
-  secret: codeforge-ai-super-secret-jwt-key-256-bits-long-change-in-prod
+  secret: ${JWT_SECRET:codeforge-ai-super-secret-jwt-key-256-bits-long-change-in-prod}
 
 services:
-  auth-url: http://localhost:8081
-  project-url: http://localhost:8082
-  ingestion-url: http://localhost:8083
+  auth-url: ${AUTH_SERVICE_URL:http://localhost:8081}
+  project-url: ${PROJECT_SERVICE_URL:http://localhost:8082}
+  ingestion-url: ${INGESTION_SERVICE_URL:http://localhost:8083}
 
 management:
   endpoints:
