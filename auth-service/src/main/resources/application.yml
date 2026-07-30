@@ -17,6 +17,11 @@ spring:
     hibernate:
       ddl-auto: update
     show-sql: false
+    open-in-view: false
+    properties:
+      hibernate:
+        temp:
+          use_jdbc_metadata_defaults: false
 
 jwt:
   secret: ${JWT_SECRET:codeforge-ai-super-secret-jwt-key-256-bits-long-change-in-prod}
