@@ -22,16 +22,16 @@ public class CorsFilter implements Filter {
         HttpServletRequest request = (HttpServletRequest) req;
 
         String origin = request.getHeader("Origin");
-        if (origin != null && (
-                origin.equals("http://localhost:3000") ||
-                        origin.equals("http://localhost:3001"))) {
+        if (origin != null && !origin.isEmpty()) {
             response.setHeader("Access-Control-Allow-Origin", origin);
+        } else {
+            response.setHeader("Access-Control-Allow-Origin", "*");
         }
 
         response.setHeader("Access-Control-Allow-Methods",
-                "GET, POST, PUT, DELETE, OPTIONS");
+                "GET, POST, PUT, DELETE, OPTIONS, HEAD, PATCH");
         response.setHeader("Access-Control-Allow-Headers",
-                "Authorization, Content-Type, X-User-Email");
+                "Authorization, Content-Type, X-User-Email, Accept, Origin, X-Requested-With");
         response.setHeader("Access-Control-Allow-Credentials", "true");
         response.setHeader("Access-Control-Max-Age", "3600");
 

@@ -9,6 +9,10 @@ spring:
     username: ${SPRING_DATASOURCE_USERNAME:codeforge}
     password: ${SPRING_DATASOURCE_PASSWORD:codeforge123}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      connection-timeout: 10000
+      maximum-pool-size: 5
+      minimum-idle: 1
   jpa:
     hibernate:
       ddl-auto: update
