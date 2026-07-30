@@ -94,9 +94,17 @@ public class GatewayRouter {
                 .body(request.bodyToMono(String.class), String.class)
                 .retrieve()
                 .toEntity(String.class)
-                .flatMap(response -> ServerResponse
-                        .status(response.getStatusCode())
-                        .headers(h -> h.addAll(response.getHeaders()))
-                        .bodyValue(response.getBody() != null ? response.getBody() : ""));
+                .flatMap(response -> {
+                    HttpHeaders responseHeaders = new HttpHeaders();
+                    response.getHeaders().forEach((key, values) -> {
+                        if (!key.toLowerCase().startsWith("access-control-")) {
+                            responseHeaders.addAll(key, values);
+                        }
+                    });
+                    return ServerResponse
+                            .status(response.getStatusCode())
+                            .headers(h -> h.addAll(responseHeaders))
+                            .bodyValue(response.getBody() != null ? response.getBody() : "");
+                });
     }
 }
