@@ -88,6 +88,8 @@ public class MinioService {
             throw new RuntimeException("Failed to upload file: " + e.getMessage());
         }
     }
+
+    public String readFile(String objectName) {
         if (!available) {
             log.warn("S3 storage is not available. Skipping read of: {}", objectName);
             return null;
