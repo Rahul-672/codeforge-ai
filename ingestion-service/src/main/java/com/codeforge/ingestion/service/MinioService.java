@@ -17,10 +17,10 @@ public class MinioService {
     private final String bucketName;
 
     public MinioService(
-            @Value("${minio.url}") String url,
-            @Value("${minio.access-key}") String accessKey,
-            @Value("${minio.secret-key}") String secretKey,
-            @Value("${minio.bucket}") String bucketName) {
+            @Value("${minio.url:http://localhost:9000}") String url,
+            @Value("${minio.access-key:minioadmin}") String accessKey,
+            @Value("${minio.secret-key:minioadmin123}") String secretKey,
+            @Value("${minio.bucket:codeforge-repos}") String bucketName) {
 
         this.bucketName = bucketName;
         this.minioClient = MinioClient.builder()
