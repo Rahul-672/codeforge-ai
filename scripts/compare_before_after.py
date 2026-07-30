@@ -22,7 +22,7 @@ import json
 import concurrent.futures
 from datetime import datetime
 
-BASE_URL = "http://localhost:8083/api/rag/search"
+BASE_URL = "https://codeforge-ingestion.onrender.com/api/rag/search"
 
 # Diverse test queries to avoid single-query bias
 TEST_QUERIES = [

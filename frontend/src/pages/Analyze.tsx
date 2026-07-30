@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import {orchestrateAnalysis, getUserRepos, ragSearch} from '../api';
+import { getUserRepos, ragSearch } from '../api';
 import { Cpu, Bug, Shield, Code, ChevronDown,
          ChevronUp, AlertTriangle } from 'lucide-react';
 
@@ -23,7 +23,7 @@ export default function Analyze() {
       setRepos(completed);
       if (completed.length > 0) setRepoId(completed[0].id);
     }).catch(console.error);
-  }, []);
+  }, [email]);
 
   const handleAnalyze = async (e: React.FormEvent) => {
     e.preventDefault();

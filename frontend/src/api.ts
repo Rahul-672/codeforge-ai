@@ -1,11 +1,12 @@
 import axios from 'axios';
 
-const AUTH_URL = 'http://localhost:8081';
-const INGESTION_URL = 'http://localhost:8083';
+const BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8085';
+const AUTH_URL = process.env.REACT_APP_AUTH_URL || BASE_URL;
+const INGESTION_URL = process.env.REACT_APP_INGESTION_URL || BASE_URL;
 
 const getToken = () => localStorage.getItem('token');
 
-const authHeaders = () => ({
+export const authHeaders = () => ({
   headers: { Authorization: `Bearer ${getToken()}` }
 });
 

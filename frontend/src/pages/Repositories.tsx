@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { ingestRepo, getRepoStatus, getUserRepos, embedRepo } from '../api';
+import { useState, useEffect, useCallback } from 'react';
+import { ingestRepo, getUserRepos, embedRepo } from '../api';
 import { GitBranch, Plus, RefreshCw, Cpu, CheckCircle,
          Clock, XCircle, Loader } from 'lucide-react';
 
@@ -10,14 +10,14 @@ export default function Repositories() {
   const [embedding, setEmbedding] = useState<string | null>(null);
   const email = localStorage.getItem('email') || '';
 
-  useEffect(() => { fetchRepos(); }, []);
-
-  const fetchRepos = async () => {
+  const fetchRepos = useCallback(async () => {
     try {
       const res = await getUserRepos(email);
       setRepos(res.data.data || []);
     } catch (err) { console.error(err); }
-  };
+  }, [email]);
+
+  useEffect(() => { fetchRepos(); }, [fetchRepos]);
 
   const handleIngest = async (e: React.FormEvent) => {
     e.preventDefault();

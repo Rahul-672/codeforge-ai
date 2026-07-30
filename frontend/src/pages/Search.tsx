@@ -1,7 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ragSearch, getUserRepos } from '../api';
 import { Search as SearchIcon, FileCode, Star } from 'lucide-react';
-import { useEffect } from 'react';
 
 export default function Search() {
   const [repos, setRepos] = useState<any[]>([]);
@@ -26,7 +25,7 @@ export default function Search() {
       setRepos(completed);
       if (completed.length > 0) setRepoId(completed[0].id);
     }).catch(console.error);
-  }, []);
+  }, [email]);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -137,7 +136,7 @@ export default function Search() {
             </span>
             <span style={{
               fontSize: '12px', padding: '3px 10px', borderRadius: '4px',
-              background: '#166534' + '33', color: '#22c55e'
+              background: 'rgba(22, 101, 52, 0.2)', color: '#22c55e'
             }}>
               {results.evaluation?.qualityLabel}
             </span>
