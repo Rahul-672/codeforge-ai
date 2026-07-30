@@ -6,8 +6,7 @@ import com.codeforge.ingestion.rag.chunk.CodeChunk;
 import com.codeforge.ingestion.rag.chunk.ChunkingService;
 import com.codeforge.ingestion.repository.CodeFileRepository;
 import com.codeforge.ingestion.repository.CodeRepositoryRepository;
-import io.minio.GetObjectArgs;
-import io.minio.MinioClient;
+import com.codeforge.ingestion.service.MinioService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -36,6 +35,7 @@ public class EmbeddingService {
     private final CodeFileRepository codeFileRepository;
     private final CodeRepositoryRepository codeRepositoryRepository;
     private final RestTemplate restTemplate;
+    private final MinioService minioService;
 
     @Value("${minio.url:http://localhost:9000}")
     private String minioUrl;
@@ -235,29 +235,7 @@ public class EmbeddingService {
     }
 
     private String readFileFromMinio(String minioPath) {
-        try {
-            MinioClient minioClient = MinioClient.builder()
-                    .endpoint(minioUrl)
-                    .credentials(minioAccessKey, minioSecretKey)
-                    .build();
-
-            var stream = minioClient.getObject(
-                    GetObjectArgs.builder()
-                            .bucket(minioBucket)
-                            .object(minioPath)
-                            .build());
-
-            return new BufferedReader(
-                    new InputStreamReader(
-                            stream, StandardCharsets.UTF_8))
-                    .lines()
-                    .collect(Collectors.joining("\n"));
-
-        } catch (Exception e) {
-            log.warn("Failed to read file from MinIO {}: {}",
-                    minioPath, e.getMessage());
-            return null;
-        }
+        return minioService.readFile(minioPath);
     }
 
     private boolean shouldSkipEmbedding(String language) {

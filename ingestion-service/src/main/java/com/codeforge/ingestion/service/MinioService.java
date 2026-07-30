@@ -88,4 +88,24 @@ public class MinioService {
             throw new RuntimeException("Failed to upload file: " + e.getMessage());
         }
     }
+        if (!available) {
+            log.warn("S3 storage is not available. Skipping read of: {}", objectName);
+            return null;
+        }
+        try (var response = s3Client.getObject(
+                GetObjectRequest.builder()
+                        .bucket(bucketName)
+                        .key(objectName)
+                        .build())) {
+
+            return new java.io.BufferedReader(
+                    new java.io.InputStreamReader(response, java.nio.charset.StandardCharsets.UTF_8))
+                    .lines()
+                    .collect(java.util.stream.Collectors.joining("\n"));
+
+        } catch (Exception e) {
+            log.warn("Failed to read file from S3 storage {}: {}", objectName, e.getMessage());
+            return null;
+        }
+    }
 }
