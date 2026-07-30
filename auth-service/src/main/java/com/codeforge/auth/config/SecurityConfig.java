@@ -20,14 +20,7 @@ public class SecurityConfig {
             throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
-                .cors(cors -> cors.configurationSource(request -> {
-                    org.springframework.web.cors.CorsConfiguration config = new org.springframework.web.cors.CorsConfiguration();
-                    config.setAllowedOriginPatterns(java.util.List.of("*"));
-                    config.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-                    config.setAllowedHeaders(java.util.List.of("*"));
-                    config.setAllowCredentials(true);
-                    return config;
-                }))
+                .cors(org.springframework.security.config.Customizer.withDefaults())
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
