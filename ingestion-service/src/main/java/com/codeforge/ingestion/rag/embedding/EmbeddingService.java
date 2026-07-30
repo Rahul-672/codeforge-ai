@@ -37,16 +37,16 @@ public class EmbeddingService {
     private final CodeRepositoryRepository codeRepositoryRepository;
     private final RestTemplate restTemplate;
 
-    @Value("${minio.url}")
+    @Value("${minio.url:http://localhost:9000}")
     private String minioUrl;
 
-    @Value("${minio.access-key}")
+    @Value("${minio.access-key:minioadmin}")
     private String minioAccessKey;
 
-    @Value("${minio.secret-key}")
+    @Value("${minio.secret-key:minioadmin123}")
     private String minioSecretKey;
 
-    @Value("${minio.bucket}")
+    @Value("${minio.bucket:codeforge-repos}")
     private String minioBucket;
 
 //    // Ollama embedding config
