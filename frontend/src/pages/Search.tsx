@@ -26,7 +26,7 @@ export default function Search() {
       setRepos(completed);
       if (completed.length > 0) setRepoId(completed[0].id);
     }).catch(console.error);
-  }, []);
+  }, [email]);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
