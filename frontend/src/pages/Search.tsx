@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { ragSearch, getUserRepos } from '../api';
 import { Search as SearchIcon, FileCode, Star } from 'lucide-react';
+import { useEffect } from 'react';
 
 export default function Search() {
   const [repos, setRepos] = useState<any[]>([]);
@@ -13,10 +14,10 @@ export default function Search() {
   });
 
   const [query, setQuery] = useState(() =>
-      sessionStorage.getItem('searchQuery') || '');
+    sessionStorage.getItem('searchQuery') || '');
 
   const [repoId, setRepoId] = useState(() =>
-      sessionStorage.getItem('searchRepoId') || '');
+    sessionStorage.getItem('searchRepoId') || '');
 
   useEffect(() => {
     getUserRepos(email).then(res => {
@@ -25,7 +26,7 @@ export default function Search() {
       setRepos(completed);
       if (completed.length > 0) setRepoId(completed[0].id);
     }).catch(console.error);
-  }, [email]);
+  }, []);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -99,21 +100,31 @@ export default function Search() {
               gap: '10px', marginBottom: '1.5rem'
             }}>
               {[
-                { label: 'Context Relevance',
-                  val: results.evaluation.contextRelevance },
-                { label: 'Faithfulness',
-                  val: results.evaluation.answerFaithfulness },
-                { label: 'Answer Relevance',
-                  val: results.evaluation.answerRelevance },
-                { label: 'Overall Score',
-                  val: results.evaluation.overallScore }
+                {
+                  label: 'Context Relevance',
+                  val: results.evaluation.contextRelevance
+                },
+                {
+                  label: 'Faithfulness',
+                  val: results.evaluation.answerFaithfulness
+                },
+                {
+                  label: 'Answer Relevance',
+                  val: results.evaluation.answerRelevance
+                },
+                {
+                  label: 'Overall Score',
+                  val: results.evaluation.overallScore
+                }
               ].map(m => (
                 <div key={m.label} style={{
                   background: '#161616', border: '1px solid #222',
                   borderRadius: '8px', padding: '12px'
                 }}>
-                  <p style={{ fontSize: '11px', color: '#555',
-                    marginBottom: '4px' }}>{m.label}</p>
+                  <p style={{
+                    fontSize: '11px', color: '#555',
+                    marginBottom: '4px'
+                  }}>{m.label}</p>
                   <p style={{
                     fontSize: '20px', fontWeight: 600,
                     color: m.val > 0.7 ? '#22c55e'
@@ -136,7 +147,7 @@ export default function Search() {
             </span>
             <span style={{
               fontSize: '12px', padding: '3px 10px', borderRadius: '4px',
-              background: 'rgba(22, 101, 52, 0.2)', color: '#22c55e'
+              background: '#166534' + '33', color: '#22c55e'
             }}>
               {results.evaluation?.qualityLabel}
             </span>

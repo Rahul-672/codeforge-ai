@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
-import { getUserRepos, ragSearch } from '../api';
-import { Cpu, Bug, Shield, Code, ChevronDown,
-         ChevronUp, AlertTriangle } from 'lucide-react';
+import { orchestrateAnalysis, getUserRepos, ragSearch } from '../api';
+import {
+  Cpu, Bug, Shield, Code, ChevronDown,
+  ChevronUp, AlertTriangle
+} from 'lucide-react';
 
 export default function Analyze() {
   const [query, setQuery] = useState('');
@@ -23,7 +25,7 @@ export default function Analyze() {
       setRepos(completed);
       if (completed.length > 0) setRepoId(completed[0].id);
     }).catch(console.error);
-  }, [email]);
+  }, []);
 
   const handleAnalyze = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,7 +35,7 @@ export default function Analyze() {
       const res = await ragSearch(query, repoId);
       setResults(res.data.data);
       sessionStorage.setItem('analyzeResults',
-          JSON.stringify(res.data.data));
+        JSON.stringify(res.data.data));
       sessionStorage.setItem('searchQuery', query);
       sessionStorage.setItem('searchRepoId', repoId);
     } catch (err) { console.error(err); }
@@ -190,8 +192,10 @@ export default function Analyze() {
             justifyContent: 'space-between', alignItems: 'center'
           }}>
             <div>
-              <p style={{ fontSize: '13px', color: '#999',
-                marginBottom: '4px' }}>
+              <p style={{
+                fontSize: '13px', color: '#999',
+                marginBottom: '4px'
+              }}>
                 {results.agentsExecuted?.length} agents ·{' '}
                 {results.successfulAgents} succeeded ·{' '}
                 {(results.totalProcessingTimeMs / 1000).toFixed(1)}s ·{' '}
@@ -288,15 +292,15 @@ export default function Analyze() {
                           </p>
                           {result.recommendations.map(
                             (rec: string, i: number) => (
-                            <div key={i} style={{
-                              fontSize: '13px', color: '#999',
-                              padding: '6px 0',
-                              borderBottom: '1px solid #1a1a1a',
-                              lineHeight: 1.5
-                            }}>
-                              {rec}
-                            </div>
-                          ))}
+                              <div key={i} style={{
+                                fontSize: '13px', color: '#999',
+                                padding: '6px 0',
+                                borderBottom: '1px solid #1a1a1a',
+                                lineHeight: 1.5
+                              }}>
+                                {rec}
+                              </div>
+                            ))}
                         </div>
                       )}
 
@@ -350,14 +354,14 @@ export default function Analyze() {
               </p>
               {results.combinedRecommendations.map(
                 (rec: string, i: number) => (
-                <div key={i} style={{
-                  fontSize: '13px', color: '#999',
-                  padding: '6px 0', borderBottom: '1px solid #1a1a1a',
-                  lineHeight: 1.5
-                }}>
-                  {i + 1}. {rec}
-                </div>
-              ))}
+                  <div key={i} style={{
+                    fontSize: '13px', color: '#999',
+                    padding: '6px 0', borderBottom: '1px solid #1a1a1a',
+                    lineHeight: 1.5
+                  }}>
+                    {i + 1}. {rec}
+                  </div>
+                ))}
             </div>
           )}
         </div>

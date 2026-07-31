@@ -103,23 +103,21 @@ public class GatewayRouter {
         }
 
         return spec.retrieve()
-                .toEntity(String.class)
-                .flatMap(response -> {
-                    HttpHeaders responseHeaders = new HttpHeaders();
-                    response.getHeaders().forEach((key, values) -> {
-                        if (!key.toLowerCase().startsWith("access-control-")) {
-                            responseHeaders.addAll(key, values);
-                        }
-                    });
-                    return ServerResponse
-                            .status(response.getStatusCode())
-                            .headers(h -> h.addAll(responseHeaders))
-                            .bodyValue(response.getBody() != null ? response.getBody() : "");
-                })
-                .onErrorResume(ex -> {
-                    log.error("Gateway error proxying to {}: {}", targetPath, ex.getMessage());
-                    return ServerResponse.status(HttpStatus.BAD_GATEWAY)
-                            .bodyValue("{\"success\":false,\"message\":\"Service is waking up or temporarily unavailable. Please retry in a few seconds.\"}");
-                });
+        .toEntity(String.class)
+        .flatMap(response -> {
+            HttpHeaders responseHeaders = new HttpHeaders();
+            response.getHeaders().forEach((key, values) -> {
+                if (!key.toLowerCase().startsWith("access-control-") &&
+                    !key.equalsIgnoreCase(HttpHeaders.CONTENT_ENCODING) &&
+                    !key.equalsIgnoreCase(HttpHeaders.CONTENT_LENGTH) &&
+                    !key.equalsIgnoreCase(HttpHeaders.TRANSFER_ENCODING)) {
+                    responseHeaders.addAll(key, values);
+                }
+            });
+            return ServerResponse
+                    .status(response.getStatusCode())
+                    .headers(h -> h.addAll(responseHeaders))
+                    .bodyValue(response.getBody() != null ? response.getBody() : "");
+        });
     }
 }
