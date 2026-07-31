@@ -1,0 +1,31 @@
+{
+  "1. Register User": {
+    "latency_ms": 1495.2,
+    "status": "SUCCESS"
+  },
+  "2. User Login": {
+    "latency_ms": 1234.91,
+    "status": "SUCCESS"
+  },
+  "3. Ingestion Submit": {
+    "latency_ms": 455.7,
+    "repo_id": "bfad23f7-0aac-4a15-9879-34e763bdfb2a"
+  },
+  "4. Ingestion Polling": {
+    "duration_sec": 2.8,
+    "status": "COMPLETED"
+  },
+  "5. Vector Embed Trigger": {
+    "latency_ms": 366.97,
+    "status": "SUCCESS"
+  },
+  "6. RAG Search (Uncached)": {
+    "latency_ms": 1366.27
+  },
+  "6. RAG Search (Cached Upstash)": {
+    "latency_ms": 344.4
+  },
+  "6. Multi-Agent Orchestration": {
+    "latency_ms": 2247.01
+  }
+}

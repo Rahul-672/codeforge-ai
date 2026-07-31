@@ -1,0 +1,75 @@
+{
+  "timestamp": "2026-07-31T23:37:00.039650",
+  "workflow_summary": {
+    "1. Register User": {
+      "latency_ms": 990.87,
+      "status": "SUCCESS"
+    },
+    "2. User Login": {
+      "latency_ms": 1204.72,
+      "status": "SUCCESS"
+    },
+    "3. Ingestion Submit": {
+      "latency_ms": 390.49,
+      "repo_id": "a4498ad6-43ea-4d54-a120-aa79026224d6"
+    },
+    "4. Ingestion Polling": {
+      "duration_sec": 2.8,
+      "status": "COMPLETED"
+    },
+    "5. Vector Embed Trigger": {
+      "latency_ms": 712.31,
+      "status": "SUCCESS"
+    },
+    "6. RAG Search (Uncached E2E)": {
+      "count": 3,
+      "mean": 647.09,
+      "p50": 689.22,
+      "p95": 941.09,
+      "min": 310.96,
+      "max": 941.09
+    },
+    "6. RAG Search (Upstash Redis Cached)": {
+      "count": 3,
+      "mean": 770.18,
+      "p50": 457.19,
+      "p95": 1465.2,
+      "min": 388.13,
+      "max": 1465.2
+    }
+  },
+  "granular_service_breakdown": {
+    "1. API Gateway & Network Overhead": {
+      "count": 3,
+      "mean": 88.09,
+      "p50": 130.22,
+      "p95": 382.09,
+      "min": -248.04,
+      "max": 382.09
+    },
+    "2. Nvidia AI 4096-dim Embeddings API": {
+      "count": 3,
+      "mean": 326,
+      "p50": 326,
+      "p95": 326,
+      "min": 326,
+      "max": 326
+    },
+    "3. Qdrant Cloud Vector Database": {
+      "count": 3,
+      "mean": 232,
+      "p50": 232,
+      "p95": 232,
+      "min": 232,
+      "max": 232
+    },
+    "4. Groq LLM Multi-Agent Engine": {
+      "count": 2,
+      "mean": 2748.5,
+      "p50": 4123,
+      "p95": 4123,
+      "min": 1374,
+      "max": 4123
+    }
+  }
+}
