@@ -22,7 +22,7 @@ public class LLMService {
     @Value("${groq.url:https://api.groq.com/openai/v1/chat/completions}")
     private String groqUrl;
 
-    @Value("${groq.model:llama3-8b-8192}")
+    @Value("${groq.model:llama-3.1-8b-instant}")
     private String groqModel;
 
     public String chat(String systemPrompt, String userMessage) {
