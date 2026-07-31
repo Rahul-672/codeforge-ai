@@ -1,0 +1,63 @@
+server:
+  port: ${PORT:8083}
+
+spring:
+  application:
+    name: ingestion-service
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5433/codeforge}
+    username: ${SPRING_DATASOURCE_USERNAME:codeforge}
+    password: ${SPRING_DATASOURCE_PASSWORD:codeforge123}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    properties:
+      hibernate:
+        temp:
+          use_jdbc_metadata_defaults: false
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      ssl:
+        enabled: ${REDIS_SSL:false}
+      timeout: 5000
+  cache:
+    type: ${CACHE_TYPE:redis}
+    redis:
+      time-to-live: 3600000
+      cache-null-values: false
+
+minio:
+  url: ${MINIO_URL:http://localhost:9000}
+  access-key: ${MINIO_ACCESS_KEY:minioadmin}
+  secret-key: ${MINIO_SECRET_KEY:minioadmin123}
+  bucket: ${MINIO_BUCKET:codeforge-repos}
+
+github:
+  token: ${GITHUB_TOKEN:}
+
+nvidia:
+  api-key: ${NVIDIA_API_KEY:}
+
+groq:
+  api-key: ${GROQ_API_KEY:}
+  model: ${GROQ_MODEL:llama3-8b-8192}
+  url: ${GROQ_URL:https://api.groq.com/openai/v1/chat/completions}
+
+qdrant:
+  url: ${QDRANT_URL:http://localhost:6333}
+  api-key: ${QDRANT_API_KEY:}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always

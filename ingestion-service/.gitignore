@@ -32,5 +32,3 @@ build/
 ### VS Code ###
 .vscode/
 
-### Local config (use application.yml.example as template) ###
-src/main/resources/application.yml
