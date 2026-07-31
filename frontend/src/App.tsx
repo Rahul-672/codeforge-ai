@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
-import Repositories from './pages/Repositories';
+import {Repositories} from './pages/Repositories';
 import Search from './pages/Search';
 import Analyze from './pages/Analyze';
 import Navbar from './components/Navbar';

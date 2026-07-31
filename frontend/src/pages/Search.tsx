@@ -147,7 +147,7 @@ export default function Search() {
             </span>
             <span style={{
               fontSize: '12px', padding: '3px 10px', borderRadius: '4px',
-              background: '#166534' + '33', color: '#22c55e'
+              background: '#16653433', color: '#22c55e'
             }}>
               {results.evaluation?.qualityLabel}
             </span>
