@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getUserRepos, ragSearch } from '../api';
+import { getUserRepos, orchestrateAnalysis } from '../api';
 import {
   Cpu, Bug, Shield, Code, ChevronDown,
   ChevronUp, AlertTriangle
@@ -32,12 +32,11 @@ export default function Analyze() {
     if (!query.trim() || !repoId) return;
     setLoading(true);
     try {
-      const res = await ragSearch(query, repoId);
+      const agentsToRun = selectedAgents.includes('ALL') ? undefined : selectedAgents;
+      const res = await orchestrateAnalysis(repoId, query.trim(), agentsToRun);
       setResults(res.data.data);
       sessionStorage.setItem('analyzeResults',
         JSON.stringify(res.data.data));
-      sessionStorage.setItem('searchQuery', query);
-      sessionStorage.setItem('searchRepoId', repoId);
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
   };
