@@ -84,6 +84,7 @@ public class GatewayRouter {
         HttpHeaders headersToForward = new HttpHeaders();
         request.headers().asHttpHeaders().forEach((key, values) -> {
             if (!key.equalsIgnoreCase(HttpHeaders.HOST) &&
+                !key.equalsIgnoreCase(HttpHeaders.ACCEPT_ENCODING) &&
                 !key.equalsIgnoreCase(HttpHeaders.CONTENT_LENGTH) &&
                 !key.equalsIgnoreCase(HttpHeaders.TRANSFER_ENCODING) &&
                 !key.equalsIgnoreCase(HttpHeaders.CONNECTION)) {
