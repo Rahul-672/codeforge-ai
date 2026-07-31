@@ -35,7 +35,9 @@ public class GatewayRouter {
         return RouterFunctions
                 .route(RequestPredicates.path("/api/auth/**"), this::proxyToAuth)
                 .andRoute(RequestPredicates.path("/api/projects/**"), this::proxyToProject)
-                .andRoute(RequestPredicates.path("/api/ingest/**"), this::proxyToIngestion);
+                .andRoute(RequestPredicates.path("/api/ingest/**"), this::proxyToIngestion)
+                .andRoute(RequestPredicates.path("/api/rag/**"), this::proxyToIngestion)
+                .andRoute(RequestPredicates.path("/api/orchestrator/**"), this::proxyToIngestion);
     }
 
     private Mono<ServerResponse> proxyToAuth(ServerRequest request) {
